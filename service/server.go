@@ -88,7 +88,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 //Serve 启动服务
 func Serve(ctx context.Context, port int) {
-	http.HandleFunc("/echo", echo)
+	http.HandleFunc("/asr/streaming", echo)
 	http.HandleFunc("/", home)
 
 	addr := fmt.Sprintf(":%d", port)

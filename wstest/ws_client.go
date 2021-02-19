@@ -16,7 +16,7 @@ func main() {
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt)
 
-	u := url.URL{Scheme: "ws", Host: "localhost:8000", Path: "/echo"}
+	u := url.URL{Scheme: "ws", Host: "39.96.21.121:8000", Path: "/asr/streaming"}
 	log.Printf("connecting to %s", u.String())
 
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
