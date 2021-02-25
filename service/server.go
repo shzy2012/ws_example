@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,6 +13,7 @@ import (
 var upgrader = websocket.Upgrader{} // use default options
 
 func echo(w http.ResponseWriter, r *http.Request) {
+
 	done := make(chan struct{})
 	ch := make(chan []byte, 0)
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -43,9 +44,10 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	//定义用于请求的ws的客户端
-	u := url.URL{Scheme: "ws", Host: "103.242.175.164:18080", Path: "/asr/streaming"}
-	log.Printf("connecting to %s", u.String())
-	ws, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	// u := url.URL{Scheme: "ws", Host: "103.242.175.164:18080", Path: "/asr/streaming?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)8000,+format=(string)S16LE,+channels=(int)1"}
+	cu := "ws://103.242.175.164:18080/asr/streaming" + r.RequestURI[strings.Index(r.RequestURI, "?"):]
+	log.Printf("connecting to %s", cu)
+	ws, _, err := websocket.DefaultDialer.Dial(cu, nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
