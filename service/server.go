@@ -3,11 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/websocket"
+	"github.com/shzy2012/common/log"
 )
 
 var upgrader = websocket.Upgrader{} // use default options
@@ -15,12 +15,23 @@ var upgrader = websocket.Upgrader{} // use default options
 func echo(w http.ResponseWriter, r *http.Request) {
 
 	done := make(chan struct{})
-	ch := make(chan []byte, 0)
+	ch := make(chan string)
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Printf("upgrade:%s\n", err)
 		return
 	}
+
+	//定义用于请求的ws的客户端
+	// u := url.URL{Scheme: "ws", Host: "103.242.175.164:18080", Path: "/asr/streaming?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)8000,+format=(string)S16LE,+channels=(int)1"}
+	cu := "ws://103.242.175.164:18080/asr/streaming" + r.RequestURI[strings.Index(r.RequestURI, "?"):]
+	log.Printf("connecting to %s", cu)
+	ws, _, err := websocket.DefaultDialer.Dial(cu, nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	defer ws.Close()
+
 	defer func() {
 		close(done)
 		close(ch)
@@ -36,22 +47,15 @@ func echo(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			err := c.WriteMessage(websocket.BinaryMessage, data)
+			log.Printf("data length:%v\n", len(data))
+			log.Printf("data :%s\n", data)
+			//注意:返回TextMessage
+			err := c.WriteMessage(websocket.TextMessage, []byte(data))
 			if err != nil {
 				log.Println("write:", err)
 			}
 		}
 	}()
-
-	//定义用于请求的ws的客户端
-	// u := url.URL{Scheme: "ws", Host: "103.242.175.164:18080", Path: "/asr/streaming?content-type=audio/x-raw,+layout=(string)interleaved,+rate=(int)8000,+format=(string)S16LE,+channels=(int)1"}
-	cu := "ws://103.242.175.164:18080/asr/streaming" + r.RequestURI[strings.Index(r.RequestURI, "?"):]
-	log.Printf("connecting to %s", cu)
-	ws, _, err := websocket.DefaultDialer.Dial(cu, nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer ws.Close()
 
 	//3:读取消息
 	go func() {
@@ -61,8 +65,8 @@ func echo(w http.ResponseWriter, r *http.Request) {
 				log.Println("read:", err)
 				return
 			}
-			log.Printf("recv: %s", message)
-			ch <- message
+			log.Printf("recv message service: %v\n", len(message))
+			ch <- fmt.Sprintf("%s", message)
 		}
 	}()
 
@@ -73,7 +77,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 			log.Println("read:", err)
 			return
 		}
-		// log.Printf("recv: %s", message)
+		log.Printf("recv message from client: %v\n", len(message))
 
 		//2:处理消息
 		err = ws.WriteMessage(websocket.BinaryMessage, message)
